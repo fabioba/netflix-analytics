@@ -13,3 +13,10 @@ The goal of this project is to analyze the Netflix usage starting from the first
 ### North Star KPIs
 - watch at least 2 different tv series during the same week
 - bing watch (tv series): complete a tv series in less than 3 days
+
+
+## Technical Guide
+In order to reach the goal these are the steps to follow to develop the system:
+1. ingest data from Netflix
+2. for each movie, extract the details (via the TMDB API)
+3. create the star schema
