@@ -32,13 +32,13 @@ from datetime import datetime
 def dag_netflix_streaming():
     
     @task_group(group_id = "ingest_data")
-    def extract_data():
+    def extract_load_netflix_streaming():
             
-        @task
+        @task()
         def ingest_netflix_streaming():
             """"""
 
-            df_netflix = pd.read_csv('inlcude/data/netflix_csv')
+            df_netflix = pd.read_csv('inlcude/data/netflix.csv')
  
             # Convert DataFrame to CSV in memory
             csv_buffer = io.StringIO()
@@ -49,40 +49,65 @@ def dag_netflix_streaming():
             gcs_hook = GCSHook(gcp_conn_id= 'gcp-netflix-data')
             gcs_hook.upload(
                 bucket_name= 'netflix-etl',
-                object_name= f'netflifx_raw/netflix_{datetime.now().strftime("%m_%d_%Y_%H:%M:%S")}.csv',
+                object_name= f'raw/netflix_{datetime.now().strftime("%m_%d_%Y_%H:%M:%S")}.csv',
                 data=csv_buffer.getvalue(),
                 mime_type='text/csv',
             )
+        
 
-
-        @task
-        def ingest_movie_details():
+        @task()
+        def load_netflix_streaming():
             gcs_hook = GCSHook(gcp_conn_id= 'gcp-netflix-data')
 
-            list_raw_files = gcs_hook.list(bucket_name='netflix-etl', prefix='netflifx_raw/')
+            list_raw_files = gcs_hook.list(bucket_name='netflix-etl', prefix='raw/')
 
             for raw_file in list_raw_files:
 
                 logger.info(f'read raw_file: {raw_file}')
 
+                # Initialize the BigQuery Hook
+                bq_hook = BigQueryHook(gcp_conn_id= 'gcp-netflix-data')
+
                 # Download the file as a string
-                file_content = gcs_hook.download(bucket_name='sales-data-raw', object_name=raw_file)
+                file_content = gcs_hook.download(bucket_name='netflix-etl', object_name=raw_file)
                 
                 # Convert the content to a pandas DataFrame
-                df_netflix = pd.read_csv(io.StringIO(file_content.decode('utf-8')))
+                df = pd.read_csv(io.StringIO(file_content.decode('utf-8')))
+
+                rows = df.to_dict(orient="records")
+
+                # Insert rows into the BigQuery table
+                bq_hook.insert_all(
+                    project_id= 'ace-mile-446412-j2',
+                    dataset_id= 'SALES',
+                    table_id= 'RAW_SALES',
+                    rows=rows,
+                )
+
+        gcs_raw_to_hist = GCSToGCSOperator(
+                task_id="gcs_raw_to_hist",
+                source_bucket="netflix-etl",
+                source_objects= ["raw/*"],
+                destination_bucket="netflix-etl",
+                destination_object="hist/",
+                gcp_conn_id= 'gcp-netflix-data',
+                move_object = True
+            )    
+        
+        ingest_netflix_streaming() >> load_netflix_streaming() >> gcs_raw_to_hist
 
 
-                url = "https://api.themoviedb.org/3/search/movie?query=Jack+Reacher"
-                api_key = ''
 
-                headers = {
-                    "accept": "application/json",
-                    "Authorization": f"Bearer {api_key}"
-                }
+        @task()
+        def ingest_movie_details():
+            """filter out those movies that are already ingested"""
+            bq_hook = BigQueryHook(gcp_conn_id= 'gcp-netflix-data')
 
-                response = requests.get(url, headers=headers)
+            query_new_movies = get_query('include/sql/new_movie.sql')
+        
+            df_new_movies = bq_hook.get_pandas_df(sql=query_new_movies)
+            
 
-                response.status_code
 
   
         @task
@@ -97,10 +122,6 @@ def dag_netflix_streaming():
     def load_data():
 
         @task()
-        def load_netflix_streaming():
-            pass
-
-        @task()
         def load_movie_details():
             pass
 
@@ -108,8 +129,8 @@ def dag_netflix_streaming():
         @task()
         def load_genre_details():
             pass
-
-        load_netflix_streaming() >> load_movie_details() >> load_genre_details()
+        
+        load_movie_details() >> load_genre_details()
 
 
     @task_group(group_id = "move_extracted_data_to_hist")
@@ -133,6 +154,6 @@ def dag_netflix_streaming():
         move_netflix_streaming_hist() >> move_movie_details_hist() >> move_genre_details_hist()
 
 
-    extract_data() >> load_data() >> move_extracted_data_to_hist()
+    extract_load_netflix_streaming() >> load_data() >> move_extracted_data_to_hist()
 
 dag_netflix_streaming()

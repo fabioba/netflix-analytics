@@ -4,23 +4,23 @@
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
-                <mxCell id="2" value="ENTITIES:&lt;br&gt;- content: title, release date, vote average, vote count, movie_flag&amp;nbsp;&lt;br&gt;- genre: name&lt;br&gt;- streaming: streaming date, title&lt;br&gt;&lt;br&gt;RELATIONSHIPS:&lt;br&gt;- content has one or more genres&lt;br&gt;- content is streamed one or more times" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;" vertex="1" parent="1">
+                <mxCell id="2" value="ENTITIES:&lt;br&gt;- content: title, release date, vote average, vote count, movie_flag&amp;nbsp;&lt;br&gt;- genre: name&lt;br&gt;- streaming: streaming date, title&lt;br&gt;&lt;br&gt;RELATIONSHIPS:&lt;br&gt;- content has one or more genres&lt;br&gt;- content is streamed one or more times" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=30;" parent="1" vertex="1">
                     <mxGeometry x="119" y="60" width="801" height="410" as="geometry"/>
                 </mxCell>
-                <mxCell id="5" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=30;" edge="1" parent="1" source="3" target="4">
+                <mxCell id="5" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;fontSize=30;" parent="1" source="3" target="4" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="7" style="edgeStyle=none;html=1;fontSize=30;" edge="1" parent="1" source="3" target="6">
+                <mxCell id="7" style="edgeStyle=none;html=1;fontSize=30;" parent="1" source="3" target="6" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="3" value="CONTENT" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" vertex="1" parent="1">
+                <mxCell id="3" value="CONTENT" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" parent="1" vertex="1">
                     <mxGeometry x="160" y="490" width="210" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="4" value="GENRE" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" vertex="1" parent="1">
+                <mxCell id="4" value="GENRE" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" parent="1" vertex="1">
                     <mxGeometry x="160" y="660" width="210" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="6" value="STREAMING" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" vertex="1" parent="1">
-                    <mxGeometry x="570" y="490" width="210" height="60" as="geometry"/>
+                <mxCell id="6" value="STREAMING" style="rounded=1;whiteSpace=wrap;html=1;fontSize=30;" parent="1" vertex="1">
+                    <mxGeometry x="530" y="490" width="210" height="60" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
