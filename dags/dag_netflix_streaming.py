@@ -11,8 +11,7 @@ from airflow.providers.google.cloud.transfers.gcs_to_gcs import GCSToGCSOperator
 import pendulum
 import pandas as pd
 import io
-from resources.utils import get_query
-import requests
+from resources.utils import get_query, get_data_from_themoviedb
 from datetime import datetime
 
 @dag(
@@ -79,8 +78,8 @@ def dag_netflix_streaming():
                 # Insert rows into the BigQuery table
                 bq_hook.insert_all(
                     project_id= 'ace-mile-446412-j2',
-                    dataset_id= 'SALES',
-                    table_id= 'RAW_SALES',
+                    dataset_id= 'ANALYTICS_NETFLIX',
+                    table_id= 'RAW_MOVIE',
                     rows=rows,
                 )
 
@@ -100,13 +99,29 @@ def dag_netflix_streaming():
 
         @task()
         def ingest_movie_details():
+
             """filter out those movies that are already ingested"""
             bq_hook = BigQueryHook(gcp_conn_id= 'gcp-netflix-data')
 
             query_new_movies = get_query('include/sql/new_movie.sql')
         
             df_new_movies = bq_hook.get_pandas_df(sql=query_new_movies)
-            
+
+            df_new_movie_details = get_data_from_themoviedb(df_new_movies)
+
+            # Convert DataFrame to CSV in memory
+            csv_buffer = io.StringIO()
+            df_new_movie_details.to_csv(csv_buffer, index=False)
+            csv_buffer.seek(0)
+
+            # Upload CSV to GCS
+            gcs_hook = GCSHook(gcp_conn_id= 'gcp-netflix-data')
+            gcs_hook.upload(
+                bucket_name= 'netflix-etl',
+                object_name= f'raw_movie_detail/movie_detail{datetime.now().strftime("%m_%d_%Y_%H:%M:%S")}.csv',
+                data=csv_buffer.getvalue(),
+                mime_type='text/csv',
+            )
 
 
   

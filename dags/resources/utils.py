@@ -36,7 +36,41 @@ def __get_movie_title_clean(movie_title : str) -> str:
 
     return movie_title_clean
 
-def get_data_from_themoviedb(movie_title : str, api_key : str) -> str:
+
+def get_best_choice_movie(response : str) -> pd.DataFrame:
+    """The goal of this method is to extract the best movie from the list returned by the API. 
+    Best movie is defined as most voted and with the highest rate
+
+    Args:  
+        response (str): response from API
+    
+    Returns:
+        df_movie_detail (pd.DataFrame) : best choice
+    """
+    response_json = json.loads(response.content)
+    list_movie = response_json['results']
+
+    best_movie = None
+    max_vote_count = 0
+    max_vote_average = 0
+
+    for item in list_movie:
+        
+        curr_vote_count = item['vote_count']
+        curr_vote_average = item['max_vote_average']
+
+        if curr_vote_count > max_vote_count:
+            best_movie = item
+        
+        elif curr_vote_count == max_vote_count and curr_vote_average > max_vote_average:
+            best_movie = item
+        
+    df_movie_detail = pd.DataFrame(best_movie)
+
+    return df_movie_detail
+
+
+def get_movie_detail_from_themoviedb(movie_title : str, api_key : str) -> str:
     """
     The goal of this method is to extract the movie details from themoviedb
 
@@ -45,7 +79,7 @@ def get_data_from_themoviedb(movie_title : str, api_key : str) -> str:
         api_key (str)
 
     Returns:
-        df_new_movies(pd.DataFrame)
+        df_movie_detail(pd.DataFrame)
     """
     logger.info(f'get_data_from_themoviedb movie_title: {movie_title}')
 
@@ -68,7 +102,38 @@ def get_data_from_themoviedb(movie_title : str, api_key : str) -> str:
     
     else:
 
-        df_new_movies = pd.DataFrame(json.loads(response.content))
+        df_movie_detail = get_best_choice_movie(response.content)
 
-        return df_new_movies
+        return df_movie_detail
 
+
+def get_api_key():
+    """The goal of this method is to return the API key to access to TMDB
+    
+    Returns:
+        api_key (str)
+    """
+    pass
+
+def get_data_from_themoviedb(df_new_movie : pd.DataFrame) -> pd.DataFrame:
+    """The goal of this methods is to extract the movie detail.
+
+    Args:
+        df_new_movie (pd.DataFrame)
+
+    Returns:
+        df_new_movie_details (pd.DataFrame)
+    """
+    
+    df_new_movie_details = pd.DataFrame()
+
+    api_key = get_api_key()
+
+    for idx, row in df_new_movie.iterrows():
+
+        df_movie_detail = get_movie_detail_from_themoviedb(row['title'], api_key)
+
+        df_new_movie_details.append(df_movie_detail)
+
+    
+    return df_new_movie_details
