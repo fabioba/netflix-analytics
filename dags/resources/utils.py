@@ -107,6 +107,8 @@ def get_movie_detail_from_themoviedb(movie_title : str, api_key : str) -> str:
         return df_movie_detail
 
 
+
+
 def get_api_key():
     """The goal of this method is to return the API key to access to TMDB
     
@@ -115,7 +117,7 @@ def get_api_key():
     """
     pass
 
-def get_data_from_themoviedb(df_new_movie : pd.DataFrame) -> pd.DataFrame:
+def get_movie_details(df_new_movie : pd.DataFrame) -> pd.DataFrame:
     """The goal of this methods is to extract the movie detail.
 
     Args:
@@ -137,3 +139,35 @@ def get_data_from_themoviedb(df_new_movie : pd.DataFrame) -> pd.DataFrame:
 
     
     return df_new_movie_details
+
+
+
+def get_genre_details() -> pd.DataFrame:
+    """The goal of this methods is to extract the genre detail.
+
+    Returns:
+        df_genre_details (pd.DataFrame)
+    """
+    
+    # extract data from API
+    url = "https://api.themoviedb.org/3/genre/movie/list"
+
+
+    api_key = get_api_key()
+
+    headers = {
+        "accept": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+
+        raise ValueError(f'response.status_code: {response.status_code}')
+    
+    else:
+
+        df_genre_details = pd.DataFrame(json.loads(response.content)['genres'])
+
+        return df_genre_details
