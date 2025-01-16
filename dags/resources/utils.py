@@ -204,22 +204,3 @@ def get_genre_details() -> pd.DataFrame:
 
         return df_genre_details
 
-
-def get_new_movies_clean(df_new_movies : pd.DataFrame) -> pd.DataFrame:
-    """The goal of this method is to prepare the new movies dataframe for ingesting details
-    (eg. excluding records with: Limited Series:)
-
-    Args:
-        df_new_movies (pd.DataFrame)
-
-    Returns:
-        df_new_movies_clean (pd.DataFrame)
-    """
-
-    df_new_movies_clean = df_new_movies[df_new_movies['title'].str.contains('Limited Series')]
-
-    logger.info(f'df_new_movies_clean shape: {df_new_movies_clean.shape}')
-    
-
-
-    return df_new_movies_clean

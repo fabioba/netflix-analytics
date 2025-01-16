@@ -10,5 +10,5 @@ WHERE TRUE
     AND rm.insert_timestamp >= (
         SELECT last_value 
         FROM netflix-analytics-448017.ANALYTICS_NETFLIX.CFG_FLOW_MANAGER
-        WHERE flow_name = 'NETFLIX-ANALYTICS'
+        WHERE flow_name = 'NETFLIX-ANALYTICS-INGEST-LOAD'
     );

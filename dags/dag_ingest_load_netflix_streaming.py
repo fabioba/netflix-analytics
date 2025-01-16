@@ -5,13 +5,14 @@ logger = logging.getLogger(__name__)
 from airflow.decorators import dag, task, task_group
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.hooks.bigquery import BigQueryHook
-from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.providers.google.cloud.transfers.gcs_to_gcs import GCSToGCSOperator
+from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
 import pendulum
 import pandas as pd
 import io
-from resources.utils import get_query, get_movie_details, get_genre_details, get_new_movies_clean
+from resources.utils import get_query, get_movie_details, get_genre_details
 from datetime import datetime
 
 @dag(
@@ -28,7 +29,7 @@ from datetime import datetime
     },
     tags=["netflix"],
 )
-def dag_netflix_streaming():
+def dag_ingest_load_netflix_streaming():
     
     @task_group(group_id = "extract_load_netflix_streaming")
     def extract_load_netflix_streaming():
@@ -108,7 +109,7 @@ def dag_netflix_streaming():
             """filter out those movies that are already ingested"""
             bq_hook = BigQueryHook(gcp_conn_id= 'gcp-netflix-data')
 
-            query_new_movies = get_query('include/sql/new_movie.sql')
+            query_new_movies = get_query('include/sql/ingest_load/new_movie.sql')
         
             df_new_movies = bq_hook.get_pandas_df(sql=query_new_movies, dialect = 'standard')
 
@@ -140,6 +141,8 @@ def dag_netflix_streaming():
             gcs_hook = GCSHook(gcp_conn_id= 'gcp-netflix-data')
 
             list_raw_files = gcs_hook.list(bucket_name='netflix-etl', prefix='raw_movie_detail/')
+
+            logger.info(f'len list_raw_files: {len(list_raw_files)}')
 
             for raw_file in list_raw_files:
 
@@ -244,9 +247,28 @@ def dag_netflix_streaming():
         ingest_genre_details() >> load_genre_details() >> gcs_raw_genre_details_to_hist
 
 
+    update_cfg_flow_manager = BigQueryInsertJobOperator(
+        task_id="update_cfg_flow_manager",
+        configuration={
+            "query": {
+                "query": get_query('include/sql/update_cfg_flow_manager.sql'),
+                "useLegacySql": False,
+            }
+        },
+        params={'FLOW_NAME':  'NETFLIX-ANALYTICS-INGEST-LOAD'},
+        gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+    )
+
+    
+
+    trigger_transform_netflix_streaming = TriggerDagRunOperator(
+        task_id = "trigger_transform_netflix_streaming",
+        trigger_dag_id = "dag_transform_netflix_streaming"
+    )
+
         
 
-    extract_load_netflix_streaming() >> extract_load_movie_details() >> extract_load_genre_details()
+    extract_load_netflix_streaming() >> extract_load_movie_details() >> extract_load_genre_details() >> update_cfg_flow_manager >> trigger_transform_netflix_streaming
 
 
-dag_netflix_streaming()
+dag_ingest_load_netflix_streaming()
