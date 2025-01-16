@@ -5,6 +5,9 @@ logger = logging.getLogger(__name__)
 import requests 
 import json
 import pandas as pd
+from airflow.providers.google.cloud.hooks.secret_manager import GoogleCloudSecretManagerHook 
+from google.cloud import secretmanager
+import google_crc32c
 
 # Define the task
 def get_query(file_path: str):
@@ -34,10 +37,12 @@ def __get_movie_title_clean(movie_title : str) -> str:
 
     movie_title_clean = movie_title.replace(' ', '+')
 
+    logger.info(f'movie_title_clean: {movie_title_clean}')
+
     return movie_title_clean
 
 
-def get_best_choice_movie(response : str) -> pd.DataFrame:
+def get_best_choice_movie(response) -> pd.DataFrame:
     """The goal of this method is to extract the best movie from the list returned by the API. 
     Best movie is defined as most voted and with the highest rate
 
@@ -50,6 +55,8 @@ def get_best_choice_movie(response : str) -> pd.DataFrame:
     response_json = json.loads(response.content)
     list_movie = response_json['results']
 
+    logger.info(f'list_movie: {len(list_movie)}')
+
     best_movie = None
     max_vote_count = 0
     max_vote_average = 0
@@ -57,7 +64,7 @@ def get_best_choice_movie(response : str) -> pd.DataFrame:
     for item in list_movie:
         
         curr_vote_count = item['vote_count']
-        curr_vote_average = item['max_vote_average']
+        curr_vote_average = item['vote_average']
 
         if curr_vote_count > max_vote_count:
             best_movie = item
@@ -102,10 +109,10 @@ def get_movie_detail_from_themoviedb(movie_title : str, api_key : str) -> str:
     
     else:
 
-        df_movie_detail = get_best_choice_movie(response.content)
+        df_movie_detail = get_best_choice_movie(response)
 
         return df_movie_detail
-
+    
 
 
 
@@ -115,9 +122,25 @@ def get_api_key():
     Returns:
         api_key (str)
     """
-    pass
+    secret_manager_hook = GoogleCloudSecretManagerHook(gcp_conn_id = 'gcp-netflix-data')
 
-def get_movie_details(df_new_movie : pd.DataFrame) -> pd.DataFrame:
+    response = secret_manager_hook.access_secret(project_id = 'netflix-analytics-448017', secret_id = 'tmdb-api-key')
+    
+    crc32c = google_crc32c.Checksum()
+    crc32c.update(response.payload.data)
+    if response.payload.data_crc32c != int(crc32c.hexdigest(), 16):
+        print("Data corruption detected.")
+        return response
+
+    # Print the secret payload.
+    #
+    # WARNING: Do not print the secret in a production environment - this
+    # snippet is showing how to access the secret material.
+    api_key = response.payload.data.decode("UTF-8")
+    return api_key
+    
+
+def get_movie_details(df_new_movies : pd.DataFrame) -> pd.DataFrame:
     """The goal of this methods is to extract the movie detail.
 
     Args:
@@ -127,18 +150,27 @@ def get_movie_details(df_new_movie : pd.DataFrame) -> pd.DataFrame:
         df_new_movie_details (pd.DataFrame)
     """
     
-    df_new_movie_details = pd.DataFrame()
+    list_new_movies_details = list()
 
     api_key = get_api_key()
 
-    for idx, row in df_new_movie.iterrows():
+    for idx, row in df_new_movies.iterrows():
 
-        df_movie_detail = get_movie_detail_from_themoviedb(row['title'], api_key)
+        try:
+                
+            df_movie_details = get_movie_detail_from_themoviedb(row['title'], api_key)
 
-        df_new_movie_details.append(df_movie_detail)
+            list_new_movies_details.append(df_movie_details)
+        
+        except Exception as err:
+            logger.exception(err)
+            continue
 
-    
-    return df_new_movie_details
+    df_new_movies_details = pd.concat(list_new_movies_details, ignore_index=True)
+
+    logger.info(f'df_new_movies_details shape: {df_new_movies_details.shape}')
+
+    return df_new_movies_details
 
 
 
@@ -171,3 +203,23 @@ def get_genre_details() -> pd.DataFrame:
         df_genre_details = pd.DataFrame(json.loads(response.content)['genres'])
 
         return df_genre_details
+
+
+def get_new_movies_clean(df_new_movies : pd.DataFrame) -> pd.DataFrame:
+    """The goal of this method is to prepare the new movies dataframe for ingesting details
+    (eg. excluding records with: Limited Series:)
+
+    Args:
+        df_new_movies (pd.DataFrame)
+
+    Returns:
+        df_new_movies_clean (pd.DataFrame)
+    """
+
+    df_new_movies_clean = df_new_movies[df_new_movies['title'].str.contains('Limited Series')]
+
+    logger.info(f'df_new_movies_clean shape: {df_new_movies_clean.shape}')
+    
+
+
+    return df_new_movies_clean

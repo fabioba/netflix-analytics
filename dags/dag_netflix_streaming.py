@@ -11,7 +11,7 @@ from airflow.providers.google.cloud.transfers.gcs_to_gcs import GCSToGCSOperator
 import pendulum
 import pandas as pd
 import io
-from resources.utils import get_query, get_movie_details, get_genre_details
+from resources.utils import get_query, get_movie_details, get_genre_details, get_new_movies_clean
 from datetime import datetime
 
 @dag(
@@ -37,7 +37,7 @@ def dag_netflix_streaming():
         def ingest_netflix_streaming():
             """"""
 
-            df_netflix = pd.read_csv('inlcude/data/netflix.csv')
+            df_netflix = pd.read_csv('dags/data/netflix.csv')
  
             # Convert DataFrame to CSV in memory
             csv_buffer = io.StringIO()
@@ -73,11 +73,13 @@ def dag_netflix_streaming():
                 # Convert the content to a pandas DataFrame
                 df = pd.read_csv(io.StringIO(file_content.decode('utf-8')))
 
+                logger.info(f'df shape: {df.shape}')
+
                 rows = df.to_dict(orient="records")
 
                 # Insert rows into the BigQuery table
                 bq_hook.insert_all(
-                    project_id= 'ace-mile-446412-j2',
+                    project_id= 'netflix-analytics-448017',
                     dataset_id= 'ANALYTICS_NETFLIX',
                     table_id= 'RAW_MOVIE',
                     rows=rows,
@@ -108,7 +110,12 @@ def dag_netflix_streaming():
 
             query_new_movies = get_query('include/sql/new_movie.sql')
         
-            df_new_movies = bq_hook.get_pandas_df(sql=query_new_movies)
+            df_new_movies = bq_hook.get_pandas_df(sql=query_new_movies, dialect = 'standard')
+
+            logger.info(f'df_new_movie shape: {df_new_movies.shape}')
+
+            # exclude those records that include 'Limited Series:' that refers to tv series
+            #df_new_movies_clean = get_new_movies_clean(df_new_movies)
 
             df_new_movie_details = get_movie_details(df_new_movies)
 
@@ -151,7 +158,7 @@ def dag_netflix_streaming():
 
                 # Insert rows into the BigQuery table
                 bq_hook.insert_all(
-                    project_id= 'ace-mile-446412-j2',
+                    project_id= 'netflix-analytics-448017',
                     dataset_id= 'ANALYTICS_NETFLIX',
                     table_id= 'RAW_MOVIE_DETAILS',
                     rows=rows,
@@ -218,7 +225,7 @@ def dag_netflix_streaming():
 
                 # Insert rows into the BigQuery table
                 bq_hook.insert_all(
-                    project_id= 'ace-mile-446412-j2',
+                    project_id= 'netflix-analytics-448017',
                     dataset_id= 'ANALYTICS_NETFLIX',
                     table_id= 'RAW_GENRE_DETAILS',
                     rows=rows,

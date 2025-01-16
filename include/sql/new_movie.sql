@@ -1,13 +1,14 @@
-select 
-    raw_movie.title,
-    raw_movie.date
-from raw_movie
-left join dim_movie
-    on raw_movie.title = dim_movie.title
-where true
-    and dim_movie.title is null
-    and raw_movie.insert_timestamp >= (
-        select last_value 
-        from cfg_flow_manager 
-        where flow_name = 'NETFLIX-ANALYTICS'
-        );
+SELECT 
+    rm.title,
+    rm.date
+FROM netflix-analytics-448017.ANALYTICS_NETFLIX.RAW_MOVIE rm
+LEFT JOIN netflix-analytics-448017.ANALYTICS_NETFLIX.DIM_MOVIE dm
+    ON rm.title = dm.title
+WHERE TRUE
+    AND dm.title IS NULL
+    and upper(rm.title) not like '%LIMITED SERIE%'
+    AND rm.insert_timestamp >= (
+        SELECT last_value 
+        FROM netflix-analytics-448017.ANALYTICS_NETFLIX.CFG_FLOW_MANAGER
+        WHERE flow_name = 'NETFLIX-ANALYTICS'
+    );
