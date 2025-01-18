@@ -26,7 +26,7 @@ In order to reach the goal these are the steps to follow to develop the system:
 
 
 ### Data Flow
-![img](documentation/img/data_flow.png)
+![img](documentation/img/data_flow_adj.png)
 
 
 #### Data Sources
