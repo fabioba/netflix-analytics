@@ -11,7 +11,7 @@ Analyze personal Netflix usage
 
 
 ## Goal
-The goal of this project is to analyze the Netflix usage starting from the first day of subscription (April 2024) until the end of the year.
+This project aims to analyze Netflix usage from the first day of subscription (April 2024) until the end of the year.
 
 ### Business Questions
 - what are the most watched movie category?
