@@ -2,13 +2,13 @@
 insert into netflix-analytics-448017.ANALYTICS_NETFLIX.STG_GENRE
 
     SELECT distinct
-        rg.GENRE_ID ,
+        rg.ID_GENRE ,
         rg.NAME 
     FROM netflix-analytics-448017.ANALYTICS_NETFLIX.RAW_GENRE rg
     LEFT JOIN netflix-analytics-448017.ANALYTICS_NETFLIX.DIM_GENRE dg
-        ON rg.GENRE_ID = dg.GENRE_ID
+        ON rg.ID_GENRE = dg.ID_GENRE
     WHERE TRUE
-        AND dg.GENRE_ID IS NULL
+        AND dg.ID_GENRE IS NULL
         AND rg.insert_timestamp >= (
             SELECT last_value 
             FROM netflix-analytics-448017.ANALYTICS_NETFLIX.CFG_FLOW_MANAGER

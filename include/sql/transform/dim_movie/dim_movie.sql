@@ -1,7 +1,7 @@
 insert into netflix-analytics-448017.ANALYTICS_NETFLIX.DIM_MOVIE
 
     SELECT distinct
-        MOVIE_ID ,
+        ID_MOVIE ,
         TITLE ,
         RELEASE_DATE ,
         VOTE_AVERAGE ,

@@ -105,6 +105,83 @@ def dag_transform_netflix_streaming():
         
         truncate_stg_genre >> stg_genre >> dim_genre
 
-    tg_dim_movie() >> tg_dim_genre()
+    @task_group(group_id = "tg_bridge_movie_genre")
+    def tg_bridge_movie_genre():
+
+        truncate_stg_bridge_movie_genre = BigQueryInsertJobOperator(
+            task_id="truncate_stg_bridge_movie_genre",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/truncate_stg_bridge_movie_genre.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+
+        stg_bridge_movie_genre = BigQueryInsertJobOperator(
+            task_id="stg_bridge_movie_genre",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/stg_bridge_movie_genre.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+
+        bridge_movie_genre = BigQueryInsertJobOperator(
+            task_id="bridge_movie_genre",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/bridge_movie_genre.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+        
+        truncate_stg_bridge_movie_genre >> stg_bridge_movie_genre >> bridge_movie_genre
+
+    @task_group(group_id = "fct_streaming")
+    def tg_fct_streaming():
+
+        truncate_stg_streaming = BigQueryInsertJobOperator(
+            task_id="truncate_stg_streaming",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/truncate_stg_streaming.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+
+        stg_streaming = BigQueryInsertJobOperator(
+            task_id="stg_streaming",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/stg_streaming.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+
+        fct_streaming = BigQueryInsertJobOperator(
+            task_id="fct_streaming",
+            configuration={
+                "query": {
+                    "query": get_query('include/sql/transform/fct_streaming.sql'),
+                    "useLegacySql": False,
+                }
+            },
+            gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+        )
+        
+        truncate_stg_streaming >> stg_streaming >> fct_streaming
+
+
+    tg_dim_movie() >> tg_dim_genre() >> tg_bridge_movie_genre() >> tg_fct_streaming()
 
 dag_transform_netflix_streaming()
