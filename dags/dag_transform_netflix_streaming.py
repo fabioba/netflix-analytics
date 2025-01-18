@@ -36,7 +36,7 @@ def dag_transform_netflix_streaming():
             task_id="truncate_stg_movie",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/truncate_stg_movie.sql'),
+                    "query": get_query('include/sql/transform/dim_movie/truncate_stg_movie.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -47,7 +47,7 @@ def dag_transform_netflix_streaming():
             task_id="stg_movie",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/stg_movie.sql'),
+                    "query": get_query('include/sql/transform/dim_movie/stg_movie.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -58,7 +58,7 @@ def dag_transform_netflix_streaming():
             task_id="dim_movie",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/dim_movie.sql'),
+                    "query": get_query('include/sql/transform/dim_movie/dim_movie.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -74,7 +74,7 @@ def dag_transform_netflix_streaming():
             task_id="truncate_stg_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/truncate_stg_genre.sql'),
+                    "query": get_query('include/sql/transform/dim_genre/truncate_stg_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -85,7 +85,7 @@ def dag_transform_netflix_streaming():
             task_id="stg_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/stg_genre.sql'),
+                    "query": get_query('include/sql/transform/dim_genre/stg_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -96,7 +96,7 @@ def dag_transform_netflix_streaming():
             task_id="dim_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/dim_genre.sql'),
+                    "query": get_query('include/sql/transform/dim_genre/dim_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -112,7 +112,7 @@ def dag_transform_netflix_streaming():
             task_id="truncate_stg_bridge_movie_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/truncate_stg_bridge_movie_genre.sql'),
+                    "query": get_query('include/sql/transform/bridge_movie_genre/truncate_stg_bridge_movie_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -123,7 +123,7 @@ def dag_transform_netflix_streaming():
             task_id="stg_bridge_movie_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/stg_bridge_movie_genre.sql'),
+                    "query": get_query('include/sql/transform/bridge_movie_genre/stg_bridge_movie_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -134,7 +134,7 @@ def dag_transform_netflix_streaming():
             task_id="bridge_movie_genre",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/bridge_movie_genre.sql'),
+                    "query": get_query('include/sql/transform/bridge_movie_genre/bridge_movie_genre.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -150,7 +150,7 @@ def dag_transform_netflix_streaming():
             task_id="truncate_stg_streaming",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/truncate_stg_streaming.sql'),
+                    "query": get_query('include/sql/transform/fct_streaming/truncate_stg_streaming.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -161,7 +161,7 @@ def dag_transform_netflix_streaming():
             task_id="stg_streaming",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/stg_streaming.sql'),
+                    "query": get_query('include/sql/transform/fct_streaming/stg_streaming.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -172,7 +172,7 @@ def dag_transform_netflix_streaming():
             task_id="fct_streaming",
             configuration={
                 "query": {
-                    "query": get_query('include/sql/transform/fct_streaming.sql'),
+                    "query": get_query('include/sql/transform/fct_streaming/fct_streaming.sql'),
                     "useLegacySql": False,
                 }
             },
@@ -182,6 +182,18 @@ def dag_transform_netflix_streaming():
         truncate_stg_streaming >> stg_streaming >> fct_streaming
 
 
-    tg_dim_movie() >> tg_dim_genre() >> tg_bridge_movie_genre() >> tg_fct_streaming()
+    update_cfg_flow_manager = BigQueryInsertJobOperator(
+        task_id="update_cfg_flow_manager",
+        configuration={
+            "query": {
+                "query": get_query('include/sql/update_cfg_flow_manager.sql'),
+                "useLegacySql": False,
+            }
+        },
+        params={'FLOW_NAME':  'NETFLIX-ANALYTICS-TRANSFORM'},
+        gcp_conn_id="gcp-netflix-data",  # Replace if using a custom connection
+    )
+
+    tg_dim_movie() >> tg_dim_genre() >> tg_bridge_movie_genre() >> tg_fct_streaming() >> update_cfg_flow_manager
 
 dag_transform_netflix_streaming()

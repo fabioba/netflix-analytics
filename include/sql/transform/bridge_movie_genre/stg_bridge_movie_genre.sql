@@ -3,7 +3,8 @@ insert into netflix-analytics-448017.ANALYTICS_NETFLIX.STG_BRIDGE_MOVIE_GENRE
 
     SELECT distinct
         rm.ID as ID_MOVIE ,
-        rm.genre_ids as ID_GENRE
+        cast(rm.genre_ids as float64) as ID_GENRE,
+        current_timestamp() as INSERT_TIMESTAMP
     FROM netflix-analytics-448017.ANALYTICS_NETFLIX.RAW_MOVIE_DETAILS rm
     LEFT JOIN netflix-analytics-448017.ANALYTICS_NETFLIX.BRIDGE_MOVIE_GENRE bdg
         ON rm.ID = bdg.ID_MOVIE
